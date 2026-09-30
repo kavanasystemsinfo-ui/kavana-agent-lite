@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Gancho de pre-commit: corta el commit si el escáner encuentra contaminación.
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PYTHON="${PYTHON:-python3}"
+
+if ! "$PYTHON" "$REPO_ROOT/guard/scan.py" --staged; then
+  echo ""
+  echo "Commit cortado por la puerta."
+  echo "Si un hallazgo es un falso positivo, decláralo en guard/allow.local.txt (no se publica)."
+  exit 1
+fi

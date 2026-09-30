@@ -1,0 +1,9 @@
+# Listas locales de la puerta: NUNCA se publican
+guard/patterns.local.txt
+guard/allow.local.txt
+
+# Ruido
+__pycache__/
+*.pyc
+.venv/
+.DS_Store

@@ -1,0 +1,10 @@
+# Ejemplo de lista de términos propios. Copia este fichero a
+# `guard/patterns.local.txt` (ignorado por git) y escribe los tuyos,
+# uno por línea. No se publica nunca.
+#
+# Los marcadores de abajo son inventados: sirven para ver el formato.
+
+<nombre-de-un-producto-tuyo>
+<nombre-de-un-cliente>
+<nombre-y-apellido-de-contacto>
+<tu-propio-nombre>
