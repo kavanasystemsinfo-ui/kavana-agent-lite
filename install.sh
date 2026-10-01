@@ -4,8 +4,9 @@
 #   ./install.sh --tool claude        instala en la configuracion personal
 #   ./install.sh --tool opencode --project
 #   ./install.sh --tool hermes --dry-run
+#   ./install.sh --tool codex
 #
-# Soporta tres herramientas: claude, opencode y hermes.
+# Soporta cuatro herramientas: claude, opencode, hermes y codex.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +16,7 @@ DRY=0
 
 uso() {
   cat <<'FIN'
-Uso: ./install.sh --tool <claude|opencode|hermes> [--project] [--dry-run]
+Uso: ./install.sh --tool <claude|opencode|hermes|codex> [--project] [--dry-run]
 
   --tool      herramienta destino (obligatorio)
   --project   instala en el proyecto actual en vez de en la configuracion personal
@@ -39,7 +40,8 @@ case "$TOOL" in
   claude)   CARPETA=".claude";  REGLAS="CLAUDE.md"; GLOBAL="$HOME/.claude" ;;
   opencode) CARPETA=".opencode"; REGLAS="AGENTS.md"; GLOBAL="${XDG_CONFIG_HOME:-$HOME/.config}/opencode" ;;
   hermes)   CARPETA=".hermes";  REGLAS="AGENTS.md"; GLOBAL="$HOME/.hermes" ;;
-  *) echo "Herramienta no soportada: $TOOL (usa claude, opencode o hermes)"; exit 1 ;;
+  codex)    CARPETA=".codex";   REGLAS="AGENTS.md"; GLOBAL="$HOME/.codex" ;;
+  *) echo "Herramienta no soportada: $TOOL (usa claude, opencode, hermes o codex)"; exit 1 ;;
 esac
 
 if [ "$MODE" = "project" ]; then DESTINO="$PWD/$CARPETA"; else DESTINO="$GLOBAL"; fi
