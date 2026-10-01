@@ -70,13 +70,23 @@ code, out = run([sys.executable, "guard/scan.py"])
 check("B04", "El repositorio pasa su propia puerta", code == 0,
       out.splitlines()[-1] if out else "sin salida")
 
-# B05 gancho valido y listas locales fuera del control de versiones
+# B05 gancho valido, encendido en este clon y listas locales fuera del control
+# de versiones. El "encendido" se comprueba porque la puerta no se activa sola:
+# decir 10/10 con el gancho sin instalar era un verde falso, justo lo que el
+# propio metodo prohibe.
 code, _ = run(["bash", "-n", "guard/pre-commit"])
 gi = leer(".gitignore")
 ignoradas = all(x in gi for x in ["guard/patterns.local.txt", "guard/allow.local.txt"])
-check("B05", "El gancho es valido y las listas locales no se publican",
-      code == 0 and ignoradas,
-      "sintaxis=" + ("ok" if code == 0 else "error") + ", listas ignoradas=" + str(ignoradas))
+if (REPO / ".git").exists():
+    gancho = REPO / ".git" / "hooks" / "pre-commit"
+    encendido = gancho.exists() and "scan.py" in gancho.read_text(encoding="utf-8", errors="ignore")
+    estado = "gancho instalado" if encendido else "SIN encender: ./install.sh --gancho"
+else:
+    encendido = True
+    estado = "copia sin repositorio git: el gancho se enciende desde el clon"
+check("B05", "El gancho es valido, encendido y las listas locales no se publican",
+      code == 0 and ignoradas and encendido,
+      "sintaxis=" + ("ok" if code == 0 else "error") + ", listas ignoradas=" + str(ignoradas) + ", " + estado)
 
 # B06 las skills siguen la plantilla
 skills = sorted((REPO / "craft").glob("*/SKILL.md"))
@@ -100,10 +110,16 @@ install_sh = leer("install.sh")
 citadas = {o for linea in documentacion.splitlines() if "install.sh" in linea
            for o in re.findall(r"(--[a-z][a-z0-9-]+)", linea)}
 sin_soporte = sorted(o for o in citadas if o not in install_sh)
+indice = leer("docs/skills.md")
+sin_indice = sorted(s.parent.name for s in (REPO / "craft").glob("*/SKILL.md")
+                    if s.parent.name not in indice)
 detalle = "faltan: " + ", ".join(ausentes) if ausentes else "2 comandos verificados"
 if sin_soporte:
     detalle += "; documentadas y no soportadas: " + ", ".join(sin_soporte)
-check("B07", "Los comandos del README existen", not ausentes and not sin_soporte, detalle)
+if sin_indice:
+    detalle += "; sin ficha en docs/skills.md: " + ", ".join(sin_indice)
+check("B07", "Los comandos del README y el indice de skills estan completos",
+      not ausentes and not sin_soporte and not sin_indice, detalle)
 
 # B08 si se cita una licencia, el fichero existe
 readme = leer("README.md")

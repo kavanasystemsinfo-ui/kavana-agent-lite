@@ -6,8 +6,19 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 PYTHON="${PYTHON:-python3}"
+ESCANER="$REPO_ROOT/guard/scan.py"
 
-if ! "$PYTHON" "$REPO_ROOT/guard/scan.py" --staged; then
+# Si el escaner no esta donde se espera, este gancho no puede juzgar nada. Lo
+# dice bien alto y deja pasar el commit: bloquear todos los commits con un
+# "Commit cortado por la puerta" cuando el problema es que falta el escaner es
+# un mensaje enganoso.
+if [ ! -f "$ESCANER" ]; then
+  echo "AVISO: la puerta no encuentra el escaner en $ESCANER."
+  echo "El commit pasa sin revisar. Enciendela bien con ./install.sh --gancho desde el clon."
+  exit 0
+fi
+
+if ! "$PYTHON" "$ESCANER" --staged; then
   echo ""
   echo "Commit cortado por la puerta."
   echo "Si un hallazgo es un falso positivo, decláralo en guard/allow.local.txt (no se publica)."

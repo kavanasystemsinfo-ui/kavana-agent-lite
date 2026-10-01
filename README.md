@@ -41,4 +41,4 @@ No decide producto, no sustituye criterio, no guarda contexto de negocio.
 
 ## Licencia
 
-MIT — uso libre, incluso comercial.
+- MIT — uso libre, incluso comercial. Mantenido por KAVANA Systems; incidencias en GitHub Issues.

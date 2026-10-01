@@ -119,11 +119,17 @@ echo
 if [ "$DRY" = "1" ]; then
   echo "[dry-run] crearia $DESTINO/skills/ con las skills de craft/"
   echo "[dry-run] escribiria $DESTINO/$REGLAS con la identidad y las reglas de soul/"
-  echo "[dry-run] copiaria guard/ y verify/ en $DESTINO/kavana-agent-lite/"
+  echo "[dry-run] copiaria el metodo completo (skills, puerta, bateria, docs) en $DESTINO/kavana-agent-lite/"
   exit 0
 fi
 
 mkdir -p "$DESTINO/skills"
+
+if [ -e "$DESTINO/$REGLAS" ] && ! grep -q "Reglas de trabajo" "$DESTINO/$REGLAS" 2>/dev/null; then
+  echo "Aviso: ya habia un $REGLAS en el destino y lo sobrescribo entero: no mezclo"
+  echo "reglas ajenas con estas. Si tenias las tuyas ahi, guarda copia antes de seguir."
+  echo
+fi
 
 # Reglas: identidad + reglas de trabajo + despachador, en un solo fichero
 {
@@ -147,10 +153,15 @@ for d in "$REPO_DIR"/craft/*/; do
   n_skills=$((n_skills + 1))
 done
 
-# La puerta y la bateria, para que quien instale pueda comprobar por su cuenta
+# El metodo completo en el destino, para que quien instale pueda comprobar por su
+# cuenta. La bateria juzga el repositorio entero, asi que la copia va entera: con
+# solo guard/ y verify/ daba 6/10 y la promesa de autocomprobacion era falsa.
 mkdir -p "$DESTINO/kavana-agent-lite"
-cp -r "$REPO_DIR/guard" "$DESTINO/kavana-agent-lite/"
-cp -r "$REPO_DIR/verify" "$DESTINO/kavana-agent-lite/"
+for f in README.md LICENSE .gitignore install.sh soul craft guard verify docs; do
+  [ -e "$REPO_DIR/$f" ] || continue
+  rm -rf "$DESTINO/kavana-agent-lite/$f"
+  cp -r "$REPO_DIR/$f" "$DESTINO/kavana-agent-lite/"
+done
 
 echo "Instaladas $n_skills skills en $DESTINO/skills/"
 echo "Reglas escritas en $DESTINO/$REGLAS"
