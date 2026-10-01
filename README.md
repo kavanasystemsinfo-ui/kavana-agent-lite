@@ -12,23 +12,33 @@ Para quien trabaja con agentes y está cansado de entregas que suenan bien y no 
 2. **Lectura de vuelta.** Nada se da por publicado sin releer el destino real. Un checkmark de un script no es una verificación.
 3. **Sin verde falso.** Si un contador no cuadra, se reporta el fallo antes que el número.
 
-## Cómo está montado
+## Qué hay
 
-- `soul/`: quién es el agente, cómo decide y cómo cierra.
-- `craft/`: procedimientos por área, uno por fichero, con la misma estructura.
-- `guard/`: el escáner y la puerta que impide publicar lo que no debe salir.
+- `soul/` — identidad, reglas, despachador (cómo clasifica, encadena y cierra)
+- `craft/` — 16 skills (procedimientos), una por carpeta, misma plantilla
+- `guard/` — escáner (6 detectores) + pre-commit que corta commits
+- `verify/` — batería 10 checks reales (caza fallos de verdad)
+- `install.sh` — instala en claude, opencode, hermes, codex
+- `LICENSE` — MIT
 
 ## Empezar
 
 ```bash
-./install.sh --tool claude        # o opencode, o hermes
-./verify/battery.py               # comprueba el estado real del repositorio
+./install.sh --tool claude        # o opencode, hermes, codex
+./verify/battery.py               # 10/10 OK
+python3 guard/scan.py             # Puerta: limpio
 ```
+
+## Verificar instalación (3 pasos)
+
+1. Pregunta: "quien eres y como trabajas?" → responde con tres estados
+2. Pregunta: "que skills tienes disponibles?" → lista 16 skills
+3. Pide leer una skill y reproducir su contenido → no es un listado
 
 ## Qué no hace
 
-No decide producto, no sustituye el criterio de quien lo usa y no guarda contexto de ningún negocio concreto.
+No decide producto, no sustituye criterio, no guarda contexto de negocio.
 
-## Estado
+## Licencia
 
-En construcción. La licencia está pendiente de decisión.
+MIT — uso libre, incluso comercial.
