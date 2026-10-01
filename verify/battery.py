@@ -16,6 +16,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -65,10 +66,36 @@ code, out = run([sys.executable, "guard/scan.py", "--self-test"])
 check("B03", "La prueba negativa de la puerta pasa", code == 0,
       out.splitlines()[-1] if out else "sin salida")
 
-# B04 el repositorio pasa su propia puerta
+# B04 el repositorio pasa su propia puerta, y la puerta protege otro repositorio.
+# La segunda mitad existe porque la promesa "sirve para cualquier repositorio" se
+# creyo sin probarla: el gancho miraba el indice del clon y dejaba pasar los
+# secretos de cualquier otro repositorio mientras decia "Puerta: limpio".
 code, out = run([sys.executable, "guard/scan.py"])
-check("B04", "El repositorio pasa su propia puerta", code == 0,
-      out.splitlines()[-1] if out else "sin salida")
+propia = code == 0
+ajena, detalle_ajena = False, "no se pudo probar"
+try:
+    with tempfile.TemporaryDirectory() as tmp:
+        git = ["git", "-C", tmp]
+        subprocess.run(git + ["init", "-q", "."], check=True, capture_output=True)
+        # El correo se arma por partes para que el escaner no lo encuentre
+        # escaneando el fichero que lo usa (lo mismo que hace guard/scan.py).
+        subprocess.run(git + ["config", "user.email",
+                              "prueba" + chr(64) + "ejemplo" + ".test"],
+                       check=True, capture_output=True)
+        subprocess.run(git + ["config", "user.name", "Prueba"], check=True, capture_output=True)
+        subprocess.run([str(REPO / "install.sh"), "--gancho"], cwd=tmp,
+                       check=True, capture_output=True, text=True)
+        (Path(tmp) / "sucio.txt").write_text(
+            'token = "' + "gh" + "p_" + "A" * 36 + '"' + chr(10), encoding="utf-8")
+        subprocess.run(git + ["add", "sucio.txt"], check=True, capture_output=True)
+        p = subprocess.run(git + ["commit", "-m", "sucio"], capture_output=True, text=True)
+        ajena = p.returncode != 0
+        detalle_ajena = "bloquea en repositorio ajeno" if ajena else "DEJA PASAR en repositorio ajeno"
+except Exception as e:  # noqa: BLE001 - se reporta, no se esconde
+    detalle_ajena = "no se pudo probar: " + str(e)
+check("B04", "El repositorio pasa su propia puerta y la puerta protege otro repositorio",
+      propia and ajena,
+      (out.splitlines()[-1] if out else "sin salida") + "; " + detalle_ajena)
 
 # B05 gancho valido, encendido en este clon y listas locales fuera del control
 # de versiones. El "encendido" se comprueba porque la puerta no se activa sola:

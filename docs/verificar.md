@@ -19,6 +19,8 @@ El escáner no se enciende solo: hay que instalarlo como gancho del repositorio 
 
 Si ya tuvieras un gancho `pre-commit` propio, no lo pisa: avisa y no toca nada.
 
+Copiar `guard/pre-commit` a mano a otro repositorio no sirve: esa copia busca el escáner dentro del repositorio donde se ejecuta y, al no encontrarlo, avisa y deja pasar el commit. Para proteger cualquier repositorio usa `--gancho`, que apunta al escáner por ruta absoluta.
+
 El escáner, con gancho o sin él, se puede lanzar siempre:
 
 ```bash

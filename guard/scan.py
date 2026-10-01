@@ -46,8 +46,7 @@ DETECTORS = [
     ("credencial", BLOCK, re.compile(
         r"\b(gh[pousr]_[A-Za-z0-9]{20,}"
         r"|github_pat_[A-Za-z0-9_]{20,}"
-        r"|sk-[A-Za-z0-9]{20,}"
-        r"|sk-ant-[A-Za-z0-9_-]{20,}"
+        r"|sk-(?:ant-|proj-|live-|test-|svcacct-)?[A-Za-z0-9_-]{20,}"
         r"|AIza[0-9A-Za-z_-]{30,}"
         r"|nvapi-[A-Za-z0-9_-]{20,}"
         r"|xox[baprs]-[A-Za-z0-9-]{10,}"
@@ -156,10 +155,23 @@ def tracked_files():
     return [l for l in out.splitlines() if l.strip() and readable(REPO / l)]
 
 
-def staged_files():
+def raiz_del_directorio():
+    """El repositorio git del directorio actual, que no es lo mismo que la carpeta
+    del escaner. El gancho se ejecuta en el repositorio que se esta commiteando, y
+    es ese indice el que hay que juzgar: mirar el del escaner deja pasar secretos
+    en cualquier otro repositorio."""
+    try:
+        out = subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, check=True).stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    return Path(out) if out else None
+
+
+def staged_files(raiz):
     try:
         out = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
-                             cwd=REPO, capture_output=True, text=True, check=True).stdout
+                             cwd=raiz, capture_output=True, text=True, check=True).stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
         return []
     return [l for l in out.splitlines() if l.strip()]
@@ -193,6 +205,8 @@ def report(findings, as_json):
 # seria imposible de mantener limpia.
 def _sucio():
     tok = "gh" + "p_" + "A" * 36
+    tok_proj = "sk-" + "proj-" + "B" * 32
+    tok_live = "sk-" + "live-" + "C" * 32
     ruta = "/" + "ho" + "me/" + "analista" + "/proyectos/app/.env"
     cifra = str(94) + "% de " + "memoria"
     copia = "el backup tiene " + str(30) + " dias"
@@ -200,7 +214,8 @@ def _sucio():
     correo = "soporte" + chr(64) + "ejemplo" + ".test"
     return chr(10).join([
         "# Notas internas de despliegue", "",
-        "Token de acceso: " + tok, "Ruta del equipo: " + ruta,
+        "Token de acceso: " + tok, "Clave de proyecto: " + tok_proj,
+        "Clave de servicio: " + tok_live, "Ruta del equipo: " + ruta,
         "El servicio aguanta con la " + cifra, copia,
         "Hardware del equipo (" + sanea + ")", "Contacto: " + correo, ""])
 
@@ -211,6 +226,7 @@ def _limpio():
         "Antes de dar un despliegue por bueno, comprueba tres cosas: que la URL viva responde,",
         "que el commit desplegado coincide con el local y que un flujo real funciona desde fuera.", "",
         "Si una de las tres falla, el despliegue no esta hecho, por muy verde que este la interfaz.",
+        "El prefijo sk- por si solo no es un secreto: sk-corto no debe contar como credencial.",
         ""])
 
 
@@ -258,7 +274,11 @@ def main():
         root = Path(args.audit).resolve()
         paths = collect(root)
     elif args.staged:
-        root, paths = REPO, staged_files()
+        raiz = raiz_del_directorio()
+        if raiz is None:
+            print("No hay repositorio git en el directorio actual: no hay indice que revisar.")
+            return 0
+        root, paths = raiz, staged_files(raiz)
     else:
         root, paths = REPO, tracked_files()
     return report(run(paths, root, terms), args.json)
