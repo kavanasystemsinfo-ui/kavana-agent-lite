@@ -16,7 +16,7 @@ Para quien trabaja con agentes y está cansado de entregas que suenan bien y no 
 
 - `soul/` — identidad, reglas, despachador (cómo clasifica, encadena y cierra)
 - `craft/` — 16 skills (procedimientos), una por carpeta, misma plantilla
-- `guard/` — escáner (6 detectores) + pre-commit que corta commits
+- `guard/` — escáner (6 detectores) + pre-commit que corta commits (`--gancho`, ver `docs/verificar.md`)
 - `verify/` — batería 10 checks reales (caza fallos de verdad)
 - `install.sh` — instala en claude, opencode, hermes, codex
 - `LICENSE` — MIT
@@ -24,7 +24,7 @@ Para quien trabaja con agentes y está cansado de entregas que suenan bien y no 
 ## Empezar
 
 ```bash
-./install.sh --tool claude        # o opencode, hermes, codex
+./install.sh --tool claude --gancho   # o opencode, hermes, codex
 ./verify/battery.py               # 10/10 OK
 python3 guard/scan.py             # Puerta: limpio
 ```

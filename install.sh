@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Instala KAVANA Agent Lite en una herramienta de agentes.
 #
-#   ./install.sh --tool claude        instala en la configuracion personal
+#   ./install.sh --tool claude              instala en la configuracion personal
+#   ./install.sh --tool claude --gancho     instala y enciende la puerta
 #   ./install.sh --tool opencode --project
 #   ./install.sh --tool hermes --dry-run
-#   ./install.sh --tool codex
+#   ./install.sh --gancho                   solo enciende la puerta en el
+#                                           repositorio git donde estes
 #
 # Soporta cuatro herramientas: claude, opencode, hermes y codex.
 set -euo pipefail
@@ -13,14 +15,18 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TOOL=""
 MODE="global"
 DRY=0
+GANCHO=0
 
 uso() {
   cat <<'FIN'
-Uso: ./install.sh --tool <claude|opencode|hermes|codex> [--project] [--dry-run]
+Uso: ./install.sh --tool <claude|opencode|hermes|codex> [--project] [--dry-run] [--gancho]
+     ./install.sh --gancho
 
-  --tool      herramienta destino (obligatorio)
+  --tool      herramienta destino
   --project   instala en el proyecto actual en vez de en la configuracion personal
   --dry-run   ensena lo que haria sin tocar nada
+  --gancho    enciende la puerta (gancho de pre-commit) en el repositorio git
+              donde estes. Con --tool hace las dos cosas.
 FIN
 }
 
@@ -29,12 +35,72 @@ while [ $# -gt 0 ]; do
     --tool) TOOL="${2:-}"; shift 2 ;;
     --project) MODE="project"; shift ;;
     --dry-run) DRY=1; shift ;;
+    --gancho) GANCHO=1; shift ;;
     -h|--help) uso; exit 0 ;;
     *) echo "Opcion no reconocida: $1"; uso; exit 1 ;;
   esac
 done
 
-if [ -z "$TOOL" ]; then uso; exit 1; fi
+if [ -z "$TOOL" ] && [ "$GANCHO" != "1" ]; then uso; exit 1; fi
+
+# La puerta. El escaner vive en este clon, asi que el gancho lo llama por ruta
+# absoluta y sirve para cualquier repositorio, no solo para este.
+instalar_gancho() {
+  local repo_root hook
+  if ! repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+    echo "La puerta necesita un repositorio git y aqui no lo hay."
+    echo "Entra en el repositorio que quieras proteger y vuelve a ejecutarlo."
+    return 1
+  fi
+  hook="$repo_root/.git/hooks/pre-commit"
+  ajeno=0
+  if [ -e "$hook" ] && ! grep -qE "KAVANA Agent Lite|guard/scan.py" "$hook" 2>/dev/null; then
+    ajeno=1
+  fi
+  if [ "$DRY" = "1" ]; then
+    echo "[dry-run] escribiria el gancho en $hook apuntando a $REPO_DIR/guard/scan.py"
+    [ "$ajeno" = "1" ] && echo "[dry-run] ojo: ahi ya hay un gancho ajeno y no lo pisaria"
+    return 0
+  fi
+  if [ "$ajeno" = "1" ]; then
+    echo "Ya hay un gancho pre-commit en $repo_root y no es mio: no lo piso."
+    echo "Guardalo o mezclalo a mano y despues vuelve a ejecutar esto."
+    return 1
+  fi
+  cat > "$hook" <<FIN
+#!/usr/bin/env bash
+# KAVANA Agent Lite: puerta de pre-commit. Corta el commit si el escaner
+# encuentra contaminacion (credenciales, claves, rutas personales, datos de
+# personas, cifras de maquina o restos de saneado).
+set -euo pipefail
+
+ESCANER="$REPO_DIR/guard/scan.py"
+PYTHON="\${PYTHON:-python3}"
+
+if [ ! -f "\$ESCANER" ]; then
+  echo "Aviso: no encuentro el escaner en \$ESCANER."
+  echo "El commit pasa sin la puerta. Reinstalala desde el clon."
+  exit 0
+fi
+
+if ! "\$PYTHON" "\$ESCANER" --staged; then
+  echo ""
+  echo "Commit cortado por la puerta."
+  echo "Si un hallazgo es un falso positivo, declaralo en $REPO_DIR/guard/allow.local.txt (no se publica)."
+  exit 1
+fi
+FIN
+  chmod +x "$hook"
+  echo "Puerta encendida: $hook"
+  echo "Comprueba que corta de verdad: crea un fichero con una cadena que parezca"
+  echo "un token, anadelo al indice (git add) y prueba a commitear. No debe pasar."
+}
+
+if [ "$GANCHO" = "1" ]; then
+  instalar_gancho || { [ -z "$TOOL" ] && exit 1; }
+  if [ -z "$TOOL" ]; then echo; exit 0; fi
+  echo
+fi
 
 case "$TOOL" in
   claude)   CARPETA=".claude";  REGLAS="CLAUDE.md"; GLOBAL="$HOME/.claude" ;;

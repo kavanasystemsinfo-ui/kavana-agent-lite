@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Gancho de pre-commit: corta el commit si el escáner encuentra contaminación.
+# KAVANA Agent Lite: puerta de pre-commit. Corta el commit si el escáner
+# encuentra contaminación. Esta es la copia del repositorio; para encenderla en
+# cualquier repositorio, ejecuta ./install.sh --gancho.
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"

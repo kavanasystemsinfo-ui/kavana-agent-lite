@@ -89,11 +89,21 @@ for s in skills:
 check("B06", "Todas las skills siguen la plantilla", bool(skills) and not malas,
       str(len(skills)) + " skills" + (", fuera de plantilla: " + "; ".join(malas) if malas else ""))
 
-# B07 lo que el README promete existe
+# B07 lo que el README promete existe: los ficheros y las opciones documentadas.
+# Este chequeo nace de un fallo real: la documentacion prometia una puerta que
+# corta commits sin decir como encenderla, y no habia forma de encenderla.
 promesas = ["install.sh", "verify/battery.py"]
 ausentes = [p for p in promesas if not (REPO / p).exists()]
-check("B07", "Los comandos del README existen", not ausentes,
-      "faltan: " + ", ".join(ausentes) if ausentes else "2 comandos verificados")
+documentacion = leer("README.md") + "\n" + "\n".join(
+    leer("docs/" + p.name) for p in sorted((REPO / "docs").glob("*.md")))
+install_sh = leer("install.sh")
+citadas = {o for linea in documentacion.splitlines() if "install.sh" in linea
+           for o in re.findall(r"(--[a-z][a-z0-9-]+)", linea)}
+sin_soporte = sorted(o for o in citadas if o not in install_sh)
+detalle = "faltan: " + ", ".join(ausentes) if ausentes else "2 comandos verificados"
+if sin_soporte:
+    detalle += "; documentadas y no soportadas: " + ", ".join(sin_soporte)
+check("B07", "Los comandos del README existen", not ausentes and not sin_soporte, detalle)
 
 # B08 si se cita una licencia, el fichero existe
 readme = leer("README.md")
